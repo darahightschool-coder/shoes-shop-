@@ -1,0 +1,812 @@
+@model IEnumerable<ShoeShop.Models.Shoe>
+@using ShoeShop.Constants
+
+@{
+    ViewData["Title"] = "Sneaker Catalog & Collection";
+    var isAdmin = User.IsInRole(Roles.Admin);
+
+    var currentCategory = ViewBag.CurrentCategory as string ?? "All";
+    var currentBrand = ViewBag.CurrentBrand as string ?? "All";
+    var currentColor = ViewBag.CurrentColor as string ?? "All";
+    var currentSearch = ViewBag.CurrentSearch as string ?? "";
+    var currentSort = ViewBag.CurrentSort as string ?? "newest";
+    var currentSize = ViewBag.CurrentSize as string ?? "All";
+    decimal? currentMinPrice = ViewBag.CurrentMinPrice as decimal?;
+    decimal? currentMaxPrice = ViewBag.CurrentMaxPrice as decimal?;
+
+    var allShoes = (ViewBag.AllShoes as List<ShoeShop.Models.Shoe>) ?? Model.ToList();
+    var availableBrands = (ViewBag.AvailableBrands as List<string>) ?? allShoes.Select(s => s.Brand).Distinct().OrderBy(b => b).ToList();
+    var availableCategories = new List<string> { "All", "Running", "Basketball", "Lifestyle" };
+}
+
+<style>
+    /* Custom Smooth E-Commerce Styling */
+    .filter-pills-container {
+        display: flex;
+        gap: 0.6rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+    }
+    .filter-pills-container::-webkit-scrollbar {
+        height: 4px;
+    }
+    .filter-pills-container::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 999px;
+    }
+
+    .category-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.55rem 1.15rem;
+        font-size: 0.88rem;
+        font-weight: 600;
+        border-radius: 50rem;
+        border: 1px solid #e2e8f0;
+        background-color: #ffffff;
+        color: #475569;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    }
+    .category-pill:hover {
+        background-color: #f8fafc;
+        border-color: #0d6efd;
+        color: #0d6efd;
+        transform: translateY(-1px);
+    }
+    .category-pill.active {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(13, 110, 253, 0.3);
+    }
+    .category-pill .pill-count {
+        font-size: 0.72rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 50rem;
+        background: rgba(0, 0, 0, 0.06);
+    }
+    .category-pill.active .pill-count {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+    }
+
+    /* Product Card Styling */
+    .shoe-card {
+        border: none;
+        border-radius: 1rem;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        overflow: hidden;
+        background: #ffffff;
+    }
+    .shoe-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08) !important;
+    }
+    .shoe-image-wrapper {
+        position: relative;
+        height: 220px;
+        background-color: #F9F9F9;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .shoe-image {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        mix-blend-mode: multiply;
+        transition: transform 0.45s ease;
+    }
+    .shoe-card:hover .shoe-image {
+        transform: scale(1.08);
+    }
+
+    /* Color Swatch Dots */
+    .color-swatch-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid #ffffff;
+        outline: 1px solid #cbd5e1;
+        display: inline-block;
+        cursor: pointer;
+        transition: transform 0.15s ease, outline-color 0.15s ease;
+    }
+    .color-swatch-btn:hover, .color-swatch-btn.active {
+        transform: scale(1.18);
+        outline: 2px solid #0d6efd !important;
+    }
+
+    /* Size Chip Buttons */
+    .size-chip {
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        color: #334155;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .size-chip:hover {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    .size-chip.active {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: #ffffff;
+    }
+
+    /* Left Sidebar Sticky */
+    .filter-sidebar {
+        position: sticky;
+        top: 85px;
+    }
+</style>
+
+<div class="container-fluid px-lg-5 py-4">
+    <!-- Header with Catalog Title and Admin Add Action -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill small">
+                    <i class="bi bi-fire me-1"></i> Official Footwear Catalog
+                </span>
+                <span class="text-muted small">|</span>
+                <span class="text-muted small" id="totalShoesBadge">@Model.Count() Sneakers Available</span>
+            </div>
+            <h1 class="h2 fw-bold mb-1 text-dark">Explore Sneakers & Footwear</h1>
+            <p class="text-muted small mb-0">Discover top-tier performance runners, iconic basketball silhouettes, and everyday lifestyle drops.</p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-3 mt-md-0 align-items-center">
+            @if (isAdmin)
+            {
+                <a asp-action="Create" class="btn btn-success fw-bold">
+                    <i class="bi bi-plus-circle-fill me-1"></i> Add New Product
+                </a>
+                <a asp-controller="AdminDashboard" asp-action="Index" class="btn btn-outline-danger fw-semibold">
+                    <i class="bi bi-speedometer2 me-1"></i> Admin Portal
+                </a>
+            }
+            <!-- Mobile Filter Toggle Button -->
+            <button class="btn btn-outline-dark d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileFilterDrawer">
+                <i class="bi bi-funnel-fill me-1"></i> Filter & Sort
+            </button>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 1. CATEGORY NAVIGATION: HORIZONTAL FILTER PILLS          -->
+    <!-- ======================================================== -->
+    <div class="mb-4">
+        <div class="filter-pills-container py-1" id="horizontalPills">
+            <!-- "All" Pill -->
+            <a href="javascript:void(0)" 
+               class="category-pill filter-pill @(currentCategory == "All" && currentBrand == "All" ? "active" : "")"
+               data-filter-type="category" 
+               data-filter-value="All">
+                <i class="bi bi-grid-fill"></i>
+                <span>All Sneakers</span>
+                <span class="pill-count">@allShoes.Count</span>
+            </a>
+
+            <!-- Category Pills: Running, Basketball, Lifestyle -->
+            <a href="javascript:void(0)" 
+               class="category-pill filter-pill @(currentCategory == "Running" ? "active" : "")"
+               data-filter-type="category" 
+               data-filter-value="Running">
+                <i class="bi bi-lightning-charge-fill text-warning"></i>
+                <span>Running</span>
+                <span class="pill-count">@allShoes.Count(s => s.Category == "Running")</span>
+            </a>
+
+            <a href="javascript:void(0)" 
+               class="category-pill filter-pill @(currentCategory == "Basketball" ? "active" : "")"
+               data-filter-type="category" 
+               data-filter-value="Basketball">
+                <i class="bi bi-trophy-fill text-danger"></i>
+                <span>Basketball</span>
+                <span class="pill-count">@allShoes.Count(s => s.Category == "Basketball")</span>
+            </a>
+
+            <a href="javascript:void(0)" 
+               class="category-pill filter-pill @(currentCategory == "Lifestyle" ? "active" : "")"
+               data-filter-type="category" 
+               data-filter-value="Lifestyle">
+                <i class="bi bi-stars text-info"></i>
+                <span>Lifestyle</span>
+                <span class="pill-count">@allShoes.Count(s => s.Category == "Lifestyle")</span>
+            </a>
+
+            <span class="align-self-center text-muted px-1">|</span>
+
+            <!-- Brand Pills: Nike, Adidas, Jordan, Puma, New Balance -->
+            @foreach (var brand in availableBrands)
+            {
+                var count = allShoes.Count(s => s.Brand.Equals(brand, StringComparison.OrdinalIgnoreCase));
+                <a href="javascript:void(0)" 
+                   class="category-pill filter-pill @(currentBrand.Equals(brand, StringComparison.OrdinalIgnoreCase) ? "active" : "")"
+                   data-filter-type="brand" 
+                   data-filter-value="@brand">
+                    <span>@brand</span>
+                    <span class="pill-count">@count</span>
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 2. TWO-COLUMN LAYOUT: SIDEBAR FILTERING + PRODUCT GRID   -->
+    <!-- ======================================================== -->
+    <div class="row g-4">
+        <!-- ======================================================== -->
+        <!-- LEFT COLUMN: SIDEBAR FILTERING (col-lg-3)                -->
+        <!-- ======================================================== -->
+        <aside class="col-lg-3 d-none d-lg-block">
+            <div class="card border-0 shadow-sm rounded-4 p-4 filter-sidebar">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-sliders2-vertical text-primary me-2"></i> Filters
+                    </h5>
+                    <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 text-danger fw-semibold" id="resetFiltersBtn">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset All
+                    </button>
+                </div>
+
+                <!-- 1. Search Bar -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-uppercase text-muted">Keyword Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" id="sidebarSearch" class="form-control border-start-0 ps-0" placeholder="e.g. Jordan, Ultraboost..." value="@currentSearch" />
+                    </div>
+                </div>
+
+                <!-- 2. Categories -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-uppercase text-muted d-block mb-2">Category</label>
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var cat in availableCategories)
+                        {
+                            var catCount = cat == "All" ? allShoes.Count : allShoes.Count(s => s.Category == cat);
+                            <div class="form-check d-flex justify-content-between align-items-center">
+                                <div>
+                                    <input class="form-check-input filter-category-radio" type="radio" name="sidebarCategory" id="cat_@cat" value="@cat" @(currentCategory == cat ? "checked" : "")>
+                                    <label class="form-check-label ms-1" for="cat_@cat">@cat</label>
+                                </div>
+                                <span class="badge bg-light text-muted border">@catCount</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- 3. Brands Checkboxes -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-uppercase text-muted d-block mb-2">Brand</label>
+                    <div class="d-flex flex-column gap-2" style="max-height: 180px; overflow-y: auto;">
+                        @foreach (var brand in availableBrands)
+                        {
+                            var brandCount = allShoes.Count(s => s.Brand.Equals(brand, StringComparison.OrdinalIgnoreCase));
+                            <div class="form-check d-flex justify-content-between align-items-center">
+                                <div>
+                                    <input class="form-check-input filter-brand-checkbox" type="checkbox" value="@brand" id="brand_@brand" @(currentBrand.Equals(brand, StringComparison.OrdinalIgnoreCase) ? "checked" : "")>
+                                    <label class="form-check-label ms-1" for="brand_@brand">@brand</label>
+                                </div>
+                                <span class="badge bg-light text-muted border">@brandCount</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- 4. Price Range Options -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label small fw-bold text-uppercase text-muted mb-0">Price Range</label>
+                        <span class="small text-primary fw-semibold" id="priceDisplay">$0 - $300</span>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="form-check">
+                            <input class="form-check-input filter-price-radio" type="radio" name="priceRange" id="priceAll" value="all" checked>
+                            <label class="form-check-label" for="priceAll">All Prices</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input filter-price-radio" type="radio" name="priceRange" id="priceUnder100" value="0-100">
+                            <label class="form-check-label" for="priceUnder100">Under $100</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input filter-price-radio" type="radio" name="priceRange" id="price100to150" value="100-150">
+                            <label class="form-check-label" for="price100to150">$100 – $150</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input filter-price-radio" type="radio" name="priceRange" id="price150to200" value="150-200">
+                            <label class="form-check-label" for="price150to200">$150 – $200</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input filter-price-radio" type="radio" name="priceRange" id="price200plus" value="200-9999">
+                            <label class="form-check-label" for="price200plus">$200 & Above</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Size Chips Selection -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-uppercase text-muted d-block mb-2">Filter by Size (US)</label>
+                    <div class="d-flex flex-wrap gap-2" id="sizeChipsContainer">
+                        @foreach (var sz in new[] { "All", "7.0", "7.5", "8.0", "8.5", "9.0", "9.5", "10.0", "10.5", "11.0", "12.0" })
+                        {
+                            <span class="size-chip @(sz == "All" ? "active" : "")" data-size="@sz">@sz</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- 6. Color Swatches -->
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-uppercase text-muted d-block mb-2">Filter by Color</label>
+                    <div class="d-flex flex-wrap gap-2 align-items-center" id="colorSwatchesContainer">
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-1 small rounded-pill active" data-color="All" id="colorAllBtn">All</button>
+                        <span class="color-swatch-btn" style="background-color: #111827;" title="Black" data-color="Black"></span>
+                        <span class="color-swatch-btn" style="background-color: #ffffff;" title="White" data-color="White"></span>
+                        <span class="color-swatch-btn" style="background-color: #ef4444;" title="Red" data-color="Red"></span>
+                        <span class="color-swatch-btn" style="background-color: #3b82f6;" title="Blue" data-color="Blue"></span>
+                        <span class="color-swatch-btn" style="background-color: #6b7280;" title="Grey" data-color="Grey"></span>
+                        <span class="color-swatch-btn" style="background-color: #10b981;" title="Green" data-color="Green"></span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ======================================================== -->
+        <!-- RIGHT COLUMN: PRODUCT GRID (col-lg-9)                    -->
+        <!-- ======================================================== -->
+        <main class="col-lg-9">
+            <!-- Active Filter Badges Bar + Sorting Controls -->
+            <div class="card border-0 shadow-sm rounded-3 p-3 mb-4 bg-white">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span class="fw-bold text-dark fs-6" id="matchingCountText">Showing @Model.Count() sneakers</span>
+                        <div id="activeTagsContainer" class="d-inline-flex flex-wrap gap-1 ms-2">
+                            <!-- Dynamic filter tags rendered via JS -->
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 ms-auto">
+                        <label for="sortSelect" class="small text-muted text-nowrap fw-semibold mb-0">Sort By:</label>
+                        <select id="sortSelect" class="form-select form-select-sm" style="width: 175px;">
+                            <option value="newest" selected="@(currentSort == "newest")">Newest Drops</option>
+                            <option value="price_asc" selected="@(currentSort == "price_asc")">Price: Low to High</option>
+                            <option value="price_desc" selected="@(currentSort == "price_desc")">Price: High to Low</option>
+                            <option value="name_asc" selected="@(currentSort == "name_asc")">Name: A to Z</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State (Shown when filters match 0 shoes) -->
+            <div id="noShoesAlert" class="card border-0 shadow-sm rounded-4 p-5 text-center my-4 d-none">
+                <div class="fs-1 text-muted mb-3">👟</div>
+                <h4 class="fw-bold text-dark">No Matching Sneakers Found</h4>
+                <p class="text-muted mb-4">Try clearing some of your filter criteria or search with a different keyword.</p>
+                <div>
+                    <button type="button" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold" id="emptyResetBtn">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset All Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- The Responsive Card Grid -->
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="shoeGrid">
+                @foreach (var shoe in Model)
+                {
+                    <div class="col shoe-grid-item" 
+                         data-id="@shoe.Id"
+                         data-brand="@shoe.Brand"
+                         data-name="@shoe.Name"
+                         data-category="@(string.IsNullOrEmpty(shoe.Category) ? "Lifestyle" : shoe.Category)"
+                         data-color="@(string.IsNullOrEmpty(shoe.Color) ? "Black" : shoe.Color)"
+                         data-price="@shoe.Price">
+
+                        <div class="card h-100 shoe-card shadow-sm">
+                            <!-- Clickable Product Image & Badges -->
+                            <a asp-action="Details" asp-route-id="@shoe.Id" class="d-block text-decoration-none shoe-image-wrapper">
+                                <img src="@(string.IsNullOrEmpty(shoe.ImageUrl) ? "https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=600&q=80" : shoe.ImageUrl)"
+                                     class="shoe-image"
+                                     alt="@shoe.Name" />
+
+                                <!-- Top Left Brand Badge -->
+                                <span class="position-absolute top-0 start-0 m-2 badge bg-dark text-uppercase px-2 py-1 shadow-sm">
+                                    @shoe.Brand
+                                </span>
+
+                                <!-- Top Right Category Pill -->
+                                <span class="position-absolute top-0 end-0 m-2 badge bg-white text-dark shadow-sm px-2 py-1 border">
+                                    <i class="bi bi-tag-fill text-primary me-1"></i>@(string.IsNullOrEmpty(shoe.Category) ? "Lifestyle" : shoe.Category)
+                                </span>
+                            </a>
+
+                            <!-- Card Body -->
+                            <div class="card-body d-flex flex-column p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h5 class="card-title fw-bold fs-6 mb-0 text-truncate flex-grow-1 me-2" title="@shoe.Name">
+                                        <a asp-action="Details" asp-route-id="@shoe.Id" class="text-dark text-decoration-none">
+                                            @shoe.Name
+                                        </a>
+                                    </h5>
+                                    <span class="badge bg-light text-secondary border small flex-shrink-0" title="Color: @shoe.Color">
+                                        <i class="bi bi-circle-fill me-1" style="color: @(shoe.Color?.ToLower() switch { "red" => "#ef4444", "white" => "#cbd5e1", "blue" => "#3b82f6", "green" => "#10b981", "grey" => "#94a3b8", _ => "#111827" }); font-size: 0.55rem;"></i>
+                                        @(shoe.Color ?? "Black")
+                                    </span>
+                                </div>
+
+                                <!-- Bold Dark Gray Price Tag (Allows Primary Blue CTA Button to Pop) -->
+                                <div class="mb-3">
+                                    <span class="fw-bold fs-5 text-dark" style="color: #0f172a !important;">$@shoe.Price.ToString("F2")</span>
+                                    <span class="text-muted small ms-1">USD</span>
+                                </div>
+
+                                <!-- Streamlined Full-Width Customer Action: Add to Cart -->
+                                <div class="mt-auto pt-3 border-top">
+                                    <form asp-controller="Cart" asp-action="AddToCart" method="post" class="m-0">
+                                        <input type="hidden" name="shoeId" value="@shoe.Id" />
+                                        <input type="hidden" name="size" value="US 9.0" />
+                                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm rounded-3 d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-bag-plus-fill me-2"></i> Add to Cart
+                                        </button>
+                                    </form>
+
+                                    @if (isAdmin)
+                                    {
+                                        <div class="d-flex gap-1 mt-2 pt-2 border-top">
+                                            <a asp-action="Edit" asp-route-id="@shoe.Id" class="btn btn-outline-primary btn-sm flex-grow-1 fw-semibold" title="Edit this shoe">
+                                                <i class="bi bi-pencil-square me-1"></i> Edit
+                                            </a>
+                                            <a asp-action="Delete" asp-route-id="@shoe.Id" class="btn btn-outline-danger btn-sm" title="Delete this shoe">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MOBILE OFFCANVAS FILTER DRAWER                           -->
+<!-- ======================================================== -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="mobileFilterDrawer" aria-labelledby="mobileFilterDrawerLabel">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold" id="mobileFilterDrawerLabel">
+            <i class="bi bi-sliders2-vertical text-primary me-2"></i> Filter Sneakers
+        </h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <p class="small text-muted mb-3">Adjust your preferences below to filter the catalog.</p>
+        <div class="d-grid gap-2 mb-4">
+            <button type="button" class="btn btn-primary" data-bs-dismiss="offcanvas">
+                View Results
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="mobileResetBtn">
+                Reset All Filters
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- INTERACTIVE JAVASCRIPT: FILTER PILLS + SIDEBAR FILTERING -->
+<!-- ======================================================== -->
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // State
+            let state = {
+                category: "@currentCategory",
+                brand: "@currentBrand",
+                color: "@currentColor",
+                size: "@currentSize",
+                priceRange: "all",
+                search: "@currentSearch",
+                sort: "@currentSort"
+            };
+
+            const shoeItems = Array.from(document.querySelectorAll(".shoe-grid-item"));
+            const shoeGrid = document.getElementById("shoeGrid");
+            const noShoesAlert = document.getElementById("noShoesAlert");
+            const matchingCountText = document.getElementById("matchingCountText");
+            const totalShoesBadge = document.getElementById("totalShoesBadge");
+            const activeTagsContainer = document.getElementById("activeTagsContainer");
+            const sidebarSearch = document.getElementById("sidebarSearch");
+            const sortSelect = document.getElementById("sortSelect");
+
+            // Filter logic
+            function applyFilters() {
+                let visibleCount = 0;
+
+                shoeItems.forEach(item => {
+                    const brand = item.getAttribute("data-brand") || "";
+                    const name = item.getAttribute("data-name") || "";
+                    const category = item.getAttribute("data-category") || "";
+                    const color = item.getAttribute("data-color") || "";
+                    const price = parseFloat(item.getAttribute("data-price")) || 0;
+
+                    let matchCategory = (state.category === "All") || (category.toLowerCase() === state.category.toLowerCase());
+                    let matchBrand = (state.brand === "All") || (brand.toLowerCase() === state.brand.toLowerCase());
+                    let matchColor = (state.color === "All") || (color.toLowerCase() === state.color.toLowerCase());
+                    let matchSearch = !state.search || name.toLowerCase().includes(state.search.toLowerCase()) || brand.toLowerCase().includes(state.search.toLowerCase());
+
+                    let matchPrice = true;
+                    if (state.priceRange !== "all") {
+                        const [min, max] = state.priceRange.split("-").map(Number);
+                        matchPrice = price >= min && price <= max;
+                    }
+
+                    if (matchCategory && matchBrand && matchColor && matchSearch && matchPrice) {
+                        item.classList.remove("d-none");
+                        visibleCount++;
+                    } else {
+                        item.classList.add("d-none");
+                    }
+                });
+
+                // Apply Sorting
+                sortItems();
+
+                // Update UI counts and empty state
+                if (visibleCount === 0) {
+                    noShoesAlert.classList.remove("d-none");
+                } else {
+                    noShoesAlert.classList.add("d-none");
+                }
+
+                matchingCountText.textContent = `Showing ${visibleCount} sneakers`;
+                totalShoesBadge.textContent = `${visibleCount} Sneakers Available`;
+
+                // Update Active Tags
+                renderActiveTags();
+
+                // Sync Horizontal Pills active highlighting
+                updatePillStyles();
+            }
+
+            function sortItems() {
+                const visibleItems = shoeItems.filter(item => !item.classList.contains("d-none"));
+
+                visibleItems.sort((a, b) => {
+                    const priceA = parseFloat(a.getAttribute("data-price")) || 0;
+                    const priceB = parseFloat(b.getAttribute("data-price")) || 0;
+                    const nameA = a.getAttribute("data-name") || "";
+                    const nameB = b.getAttribute("data-name") || "";
+                    const idA = parseInt(a.getAttribute("data-id")) || 0;
+                    const idB = parseInt(b.getAttribute("data-id")) || 0;
+
+                    if (state.sort === "price_asc") return priceA - priceB;
+                    if (state.sort === "price_desc") return priceB - priceA;
+                    if (state.sort === "name_asc") return nameA.localeCompare(nameB);
+                    return idB - idA; // newest default
+                });
+
+                visibleItems.forEach(item => shoeGrid.appendChild(item));
+            }
+
+            function renderActiveTags() {
+                activeTagsContainer.innerHTML = "";
+
+                if (state.category !== "All") {
+                    addTag(`Category: ${state.category}`, () => {
+                        state.category = "All";
+                        document.getElementById("cat_All")?.click();
+                        applyFilters();
+                    });
+                }
+
+                if (state.brand !== "All") {
+                    addTag(`Brand: ${state.brand}`, () => {
+                        state.brand = "All";
+                        document.querySelectorAll(".filter-brand-checkbox").forEach(cb => cb.checked = false);
+                        applyFilters();
+                    });
+                }
+
+                if (state.color !== "All") {
+                    addTag(`Color: ${state.color}`, () => {
+                        state.color = "All";
+                        document.getElementById("colorAllBtn")?.click();
+                        applyFilters();
+                    });
+                }
+
+                if (state.priceRange !== "all") {
+                    addTag(`Price: $${state.priceRange.replace("-", " - $")}`, () => {
+                        state.priceRange = "all";
+                        document.getElementById("priceAll")?.click();
+                        applyFilters();
+                    });
+                }
+
+                if (state.search) {
+                    addTag(`Search: "${state.search}"`, () => {
+                        state.search = "";
+                        sidebarSearch.value = "";
+                        applyFilters();
+                    });
+                }
+            }
+
+            function addTag(text, onRemove) {
+                const badge = document.createElement("span");
+                badge.className = "badge bg-primary text-white rounded-pill px-2 py-1 small d-inline-flex align-items-center gap-1 cursor-pointer";
+                badge.style.cursor = "pointer";
+                badge.innerHTML = `${text} <i class="bi bi-x-circle-fill"></i>`;
+                badge.addEventListener("click", onRemove);
+                activeTagsContainer.appendChild(badge);
+            }
+
+            function updatePillStyles() {
+                document.querySelectorAll(".category-pill").forEach(pill => {
+                    const type = pill.getAttribute("data-filter-type");
+                    const value = pill.getAttribute("data-filter-value");
+
+                    if (type === "category") {
+                        if (value === state.category && state.brand === "All") {
+                            pill.classList.add("active");
+                        } else {
+                            pill.classList.remove("active");
+                        }
+                    } else if (type === "brand") {
+                        if (value.toLowerCase() === state.brand.toLowerCase()) {
+                            pill.classList.add("active");
+                        } else {
+                            pill.classList.remove("active");
+                        }
+                    }
+                });
+            }
+
+            // 1. Horizontal Pills Click Handler
+            document.querySelectorAll(".category-pill").forEach(pill => {
+                pill.addEventListener("click", function () {
+                    const type = this.getAttribute("data-filter-type");
+                    const val = this.getAttribute("data-filter-value");
+
+                    if (type === "category") {
+                        state.category = val;
+                        state.brand = "All"; // Reset brand on category click for clear view
+                        const radio = document.getElementById(`cat_${val}`);
+                        if (radio) radio.checked = true;
+                        document.querySelectorAll(".filter-brand-checkbox").forEach(cb => cb.checked = false);
+                    } else if (type === "brand") {
+                        state.brand = val;
+                        state.category = "All"; // Reset category on brand click
+                        document.getElementById("cat_All").checked = true;
+                        document.querySelectorAll(".filter-brand-checkbox").forEach(cb => {
+                            cb.checked = (cb.value.toLowerCase() === val.toLowerCase());
+                        });
+                    }
+
+                    applyFilters();
+                });
+            });
+
+            // 2. Sidebar Search Input with debouncing
+            let searchTimeout;
+            sidebarSearch?.addEventListener("input", function () {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    state.search = sidebarSearch.value.trim();
+                    applyFilters();
+                }, 200);
+            });
+
+            // 3. Sidebar Category Radio Buttons
+            document.querySelectorAll(".filter-category-radio").forEach(radio => {
+                radio.addEventListener("change", function () {
+                    state.category = this.value;
+                    applyFilters();
+                });
+            });
+
+            // 4. Sidebar Brand Checkboxes
+            document.querySelectorAll(".filter-brand-checkbox").forEach(cb => {
+                cb.addEventListener("change", function () {
+                    if (this.checked) {
+                        // Single-brand focus
+                        document.querySelectorAll(".filter-brand-checkbox").forEach(other => {
+                            if (other !== this) other.checked = false;
+                        });
+                        state.brand = this.value;
+                    } else {
+                        state.brand = "All";
+                    }
+                    applyFilters();
+                });
+            });
+
+            // 5. Sidebar Price Range Radio Buttons
+            document.querySelectorAll(".filter-price-radio").forEach(radio => {
+                radio.addEventListener("change", function () {
+                    state.priceRange = this.value;
+                    applyFilters();
+                });
+            });
+
+            // 6. Size Chips Click Handlers
+            document.querySelectorAll(".size-chip").forEach(chip => {
+                chip.addEventListener("click", function () {
+                    document.querySelectorAll(".size-chip").forEach(c => c.classList.remove("active"));
+                    this.classList.add("active");
+                    state.size = this.getAttribute("data-size");
+                    // Note: Catalog shoes are universal/unisex in stock; we update indicator
+                    applyFilters();
+                });
+            });
+
+            // 7. Color Swatch Click Handlers
+            document.querySelectorAll(".color-swatch-btn, #colorAllBtn").forEach(swatch => {
+                swatch.addEventListener("click", function () {
+                    document.querySelectorAll(".color-swatch-btn, #colorAllBtn").forEach(s => s.classList.remove("active"));
+                    this.classList.add("active");
+                    state.color = this.getAttribute("data-color");
+                    applyFilters();
+                });
+            });
+
+            // 8. Sorting Dropdown
+            sortSelect?.addEventListener("change", function () {
+                state.sort = this.value;
+                applyFilters();
+            });
+
+            // 9. Reset Filters Function
+            function resetAll() {
+                state = {
+                    category: "All",
+                    brand: "All",
+                    color: "All",
+                    size: "All",
+                    priceRange: "all",
+                    search: "",
+                    sort: "newest"
+                };
+
+                if (sidebarSearch) sidebarSearch.value = "";
+                if (sortSelect) sortSelect.value = "newest";
+
+                document.getElementById("cat_All")?.click();
+                document.getElementById("priceAll")?.click();
+                document.getElementById("colorAllBtn")?.click();
+                document.querySelectorAll(".filter-brand-checkbox").forEach(cb => cb.checked = false);
+                document.querySelectorAll(".size-chip").forEach(c => {
+                    c.classList.toggle("active", c.getAttribute("data-size") === "All");
+                });
+
+                applyFilters();
+            }
+
+            document.getElementById("resetFiltersBtn")?.addEventListener("click", resetAll);
+            document.getElementById("emptyResetBtn")?.addEventListener("click", resetAll);
+            document.getElementById("mobileResetBtn")?.addEventListener("click", resetAll);
+
+            // Initial apply on load
+            applyFilters();
+        });
+    </script>
+}

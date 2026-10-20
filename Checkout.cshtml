@@ -1,0 +1,282 @@
+@model ShoeShop.ViewModels.CheckoutViewModel
+@{
+    ViewData["Title"] = "Secure Checkout";
+}
+
+<div class="container py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Home</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Cart" asp-action="Index" class="text-decoration-none">Cart</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Checkout</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- ======================================================== -->
+        <!-- LEFT COLUMN: Customer Shipping & Payment Selection       -->
+        <!-- ======================================================== -->
+        <div class="col-lg-7">
+            <form asp-action="Checkout" method="post" id="checkoutForm">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <!-- 1. Customer Shipping Details -->
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0">
+                            <i class="bi bi-geo-alt-fill text-primary me-2"></i> 1. Customer Shipping Details
+                        </h5>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small">
+                            <i class="bi bi-person-check-fill me-1"></i> Signed in as @User.Identity?.Name
+                        </span>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label asp-for="FullName" class="form-label fw-semibold"></label>
+                                <input asp-for="FullName" class="form-control" placeholder="e.g. Alex Johnson" />
+                                <span asp-validation-for="FullName" class="text-danger small"></span>
+                            </div>
+                            <div class="col-sm-6">
+                                <label asp-for="Email" class="form-label fw-semibold"></label>
+                                <input asp-for="Email" class="form-control" placeholder="alex@example.com" />
+                                <span asp-validation-for="Email" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Phone" class="form-label fw-semibold"></label>
+                            <input asp-for="Phone" class="form-control" placeholder="+1 555-0199 or 0812345678" />
+                            <span asp-validation-for="Phone" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-2">
+                            <label asp-for="ShippingAddress" class="form-label fw-semibold"></label>
+                            <textarea asp-for="ShippingAddress" class="form-control" rows="3" placeholder="Street Address, Apt / Suite, City, State/Province, Postal Code"></textarea>
+                            <span asp-validation-for="ShippingAddress" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Payment Method Selection (3 Selectable Cards) -->
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-header bg-white py-3 border-bottom">
+                        <h5 class="fw-bold mb-0">
+                            <i class="bi bi-credit-card-2-front-fill text-success me-2"></i> 2. Payment Method
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <span asp-validation-for="PaymentMethod" class="text-danger small d-block mb-3"></span>
+
+                        <div class="row g-3 mb-4">
+                            <!-- Option 1: Cash on Delivery (COD) -->
+                            <div class="col-12">
+                                <label class="card h-100 border p-3 cursor-pointer payment-card shadow-sm" for="optCOD">
+                                    <div class="d-flex align-items-center">
+                                        <input class="form-check-input me-3 fs-5" type="radio" asp-for="PaymentMethod" id="optCOD" value="COD" checked>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="fw-bold mb-0">💵 Cash on Delivery (COD)</h6>
+                                                <span class="badge bg-light text-dark border">Standard</span>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">Pay with cash upon package arrival.</small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Option 2: PayPal -->
+                            <div class="col-12">
+                                <label class="card h-100 border p-3 cursor-pointer payment-card shadow-sm" for="optPayPal">
+                                    <div class="d-flex align-items-center">
+                                        <input class="form-check-input me-3 fs-5" type="radio" asp-for="PaymentMethod" id="optPayPal" value="PayPal">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="fw-bold mb-0">🅿️ PayPal (Mock)</h6>
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Online Payment</span>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">Simulated PayPal checkout experience.</small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Option 3: QR Code (KHQR / Bank Scan) -->
+                            <div class="col-12">
+                                <label class="card h-100 border p-3 cursor-pointer payment-card shadow-sm" for="optQRCode">
+                                    <div class="d-flex align-items-center">
+                                        <input class="form-check-input me-3 fs-5" type="radio" asp-for="PaymentMethod" id="optQRCode" value="QRCode">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="fw-bold mb-0">📱 QR Code (KHQR / Bank Scan)</h6>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">Instant Scan</span>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">Scan QR code using your mobile banking application.</small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Payment Details Container -->
+                        <div class="border rounded-3 p-3 bg-light">
+                            <!-- COD Dynamic Details -->
+                            <div id="detailsCOD" class="payment-detail-box">
+                                <div class="d-flex align-items-center">
+                                    <div class="fs-1 me-3 text-success">💵</div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1">Cash on Delivery Notice</h6>
+                                        <p class="text-muted mb-0 small">
+                                            Pay with cash upon delivery. Please ensure exact change ($@Model.TotalAmount.ToString("F2")) is ready when the courier arrives at your shipping address.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PayPal Dynamic Details -->
+                            <div id="detailsPayPal" class="payment-detail-box d-none">
+                                <div class="text-center py-2">
+                                    <p class="text-muted small mb-3">Click below to connect with your simulated PayPal account:</p>
+                                    <button type="button" class="btn btn-warning w-100 py-2 fw-bold shadow-sm d-flex justify-content-center align-items-center" onclick="alert('Simulated PayPal authentication complete! Click \'Place Order\' to finalize.');">
+                                        <span class="fs-5 me-2" style="font-family: sans-serif; font-weight: 900; color: #003087;"><i>Pay</i><i style="color: #0079C1;">Pal</i></span>
+                                        <span>Pay with PayPal ($@Model.TotalAmount.ToString("F2"))</span>
+                                    </button>
+                                    <small class="text-muted d-block mt-2">Test mode: No real funds will be deducted.</small>
+                                </div>
+                            </div>
+
+                            <!-- QR Code Dynamic Details -->
+                            <div id="detailsQRCode" class="payment-detail-box d-none">
+                                <div class="text-center py-2">
+                                    <h6 class="fw-bold mb-1">KHQR / Mobile Bank Transfer</h6>
+                                    <p class="text-muted small mb-3">Scan with your banking app to complete payment.</p>
+
+                                    <!-- Fake QR Code Image -->
+                                    <div class="d-inline-block p-2 bg-white rounded-3 shadow-sm border mb-2">
+                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=ShoeShopPaymentAmount=@Model.TotalAmount"
+                                             alt="Bank QR Code"
+                                             class="img-fluid"
+                                             style="width: 170px; height: 170px;" />
+                                    </div>
+
+                                    <div class="small text-secondary">
+                                        <div><strong>Merchant:</strong> Shoe Shop Official Store</div>
+                                        <div><strong>Amount Due:</strong> <span class="text-success fw-bold">$@Model.TotalAmount.ToString("F2")</span></div>
+                                        <div class="text-muted fst-italic mt-1">Once scanned, click the "Place Order" button below.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Primary Submit Button -->
+                <div class="d-grid mb-4">
+                    <button type="submit" class="btn btn-primary btn-lg fw-bold py-3 shadow">
+                        <i class="bi bi-check-circle-fill me-2"></i> Place Order ($@Model.TotalAmount.ToString("F2"))
+                    </button>
+                    <a asp-action="Index" class="btn btn-link text-muted mt-2 text-decoration-none text-center">
+                        <i class="bi bi-arrow-left me-1"></i> Return to Shopping Cart
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- RIGHT COLUMN: Order Summary Card                         -->
+        <!-- ======================================================== -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-3 p-4 sticky-top" style="top: 20px;">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h5 class="fw-bold mb-0">Order Summary</h5>
+                    <span class="badge bg-dark rounded-pill">@Model.CartItems.Sum(i => i.Quantity) items</span>
+                </div>
+
+                <!-- Item Totals List -->
+                <ul class="list-unstyled mb-0">
+                    @foreach (var item in Model.CartItems)
+                    {
+                        <li class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                            <div class="d-flex align-items-center">
+                                <img src="@(string.IsNullOrEmpty(item.ImageUrl) ? "https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=200&q=80" : item.ImageUrl)"
+                                     alt="@item.Name"
+                                     class="rounded me-3 object-fit-cover shadow-sm"
+                                     style="width: 55px; height: 55px;" />
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-truncate" style="max-width: 170px;">@item.Name</h6>
+                                    <small class="text-muted">Size: @item.Size | Qty: @item.Quantity</small>
+                                </div>
+                            </div>
+                            <span class="fw-bold text-success">$@item.Total.ToString("F2")</span>
+                        </li>
+                    }
+                </ul>
+
+                <div class="d-flex justify-content-between my-2">
+                    <span class="text-muted">Delivery</span>
+                    <span class="text-success fw-semibold">FREE Expedited</span>
+                </div>
+
+                <hr class="my-3" />
+
+                <!-- Grand Total -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fs-5 fw-bold">Total Amount</span>
+                    <span class="fs-3 fw-bold text-success">$@Model.TotalAmount.ToString("F2")</span>
+                </div>
+
+                <div class="text-center text-muted small mt-2">
+                    <i class="bi bi-shield-check text-success me-1"></i>
+                    100% Safe & Secure Checkout
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <!-- Lightweight JavaScript to Dynamically Toggle Payment Details -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const radioOptions = document.querySelectorAll('input[name="PaymentMethod"]');
+            const boxCOD = document.getElementById("detailsCOD");
+            const boxPayPal = document.getElementById("detailsPayPal");
+            const boxQRCode = document.getElementById("detailsQRCode");
+
+            function updatePaymentDetails() {
+                const selectedMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
+
+                // Hide all boxes first
+                boxCOD.classList.add("d-none");
+                boxPayPal.classList.add("d-none");
+                boxQRCode.classList.add("d-none");
+
+                // Highlight active card & display matching details
+                document.querySelectorAll(".payment-card").forEach(card => card.classList.remove("border-primary", "bg-light"));
+
+                if (selectedMethod === "COD") {
+                    boxCOD.classList.remove("d-none");
+                    document.getElementById("optCOD").closest(".payment-card").classList.add("border-primary", "bg-light");
+                } else if (selectedMethod === "PayPal") {
+                    boxPayPal.classList.remove("d-none");
+                    document.getElementById("optPayPal").closest(".payment-card").classList.add("border-primary", "bg-light");
+                } else if (selectedMethod === "QRCode") {
+                    boxQRCode.classList.remove("d-none");
+                    document.getElementById("optQRCode").closest(".payment-card").classList.add("border-primary", "bg-light");
+                }
+            }
+
+            // Bind change listener to each radio button
+            radioOptions.forEach(radio => {
+                radio.addEventListener("change", updatePaymentDetails);
+            });
+
+            // Run on initial page load
+            updatePaymentDetails();
+        });
+    </script>
+}
