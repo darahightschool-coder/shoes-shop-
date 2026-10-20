@@ -1,0 +1,145 @@
+@model ShoeShop.Models.Shoe
+@using ShoeShop.Constants
+
+@{
+    ViewData["Title"] = $"{Model.Brand} {Model.Name} - Details";
+    var isAdmin = User.IsInRole(Roles.Admin);
+}
+
+<div class="container py-4">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Home</a></li>
+            <li class="breadcrumb-item"><a asp-action="Index" class="text-decoration-none">Shoes</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.Brand @Model.Name</li>
+        </ol>
+    </nav>
+
+    <!-- Professional 2-Column Product Detail Layout -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
+        <div class="card-body p-4 p-lg-5">
+            <div class="row g-5 align-items-center">
+
+                <!-- Left Column: Large High-Resolution Product Image -->
+                <div class="col-md-6">
+                    <div class="position-relative rounded-4 overflow-hidden shadow-sm d-flex align-items-center justify-content-center p-4" style="min-height: 420px; background-color: #F9F9F9;">
+                        <img src="@(string.IsNullOrEmpty(Model.ImageUrl) ? "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=80" : Model.ImageUrl)"
+                             class="w-100 h-100 object-fit-contain"
+                             alt="@Model.Name"
+                             style="max-height: 480px; object-fit: contain; mix-blend-mode: multiply;" />
+                        <span class="position-absolute top-0 start-0 m-3 badge bg-dark text-uppercase px-3 py-2 fs-6">
+                            @Model.Brand
+                        </span>
+                    </div>
+
+                    <!-- Trust Micro-Badges -->
+                    <div class="row g-2 text-center mt-3">
+                        <div class="col-4">
+                            <div class="p-2 border rounded-3 bg-light small">
+                                <i class="bi bi-shield-check text-success fs-5 d-block"></i>
+                                <span>100% Authentic</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 border rounded-3 bg-light small">
+                                <i class="bi bi-truck text-primary fs-5 d-block"></i>
+                                <span>Free Shipping</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 border rounded-3 bg-light small">
+                                <i class="bi bi-arrow-clockwise text-warning fs-5 d-block"></i>
+                                <span>30-Day Returns</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Product Information, Size Dropdown & Add to Cart -->
+                <div class="col-md-6">
+                    <div class="ps-lg-3">
+                        <div class="mb-2">
+                            <span class="badge bg-secondary text-uppercase px-2 py-1">@Model.Brand Official</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 ms-1">
+                                <i class="bi bi-check-circle-fill me-1"></i> In Stock
+                            </span>
+                        </div>
+
+                        <!-- Shoe Name -->
+                        <h1 class="display-6 fw-bold mb-3 text-dark">@Model.Name</h1>
+
+                        <!-- Large Price Tag (Bold Dark Gray / Black) -->
+                        <div class="mb-4">
+                            <span class="fw-bold display-5 text-dark" style="color: #0f172a !important;">$@Model.Price.ToString("F2")</span>
+                            <span class="text-muted small ms-2">(Taxes and duties included)</span>
+                        </div>
+
+                        <p class="text-muted mb-4">
+                            Engineered for all-day comfort and superior traction. Crafted with premium materials, supportive cushioning, and iconic street-ready styling.
+                        </p>
+
+                        <hr class="my-4" />
+
+                        <!-- Add to Cart Form -->
+                        <form asp-controller="Cart" asp-action="AddToCart" method="post">
+                            <input type="hidden" name="shoeId" value="@Model.Id" />
+
+                            <!-- Size Selector Dropdown -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label for="shoeSize" class="form-label fw-bold mb-0">Select Size (US Men / Unisex)</label>
+                                    <a href="#sizeGuide" class="small text-muted text-decoration-none">Size Guide</a>
+                                </div>
+                                <select name="size" id="shoeSize" class="form-select form-select-lg py-2" aria-label="Select Shoe Size">
+                                    <option value="US 7.0">US 7.0 - (EU 40.0)</option>
+                                    <option value="US 7.5">US 7.5 - (EU 40.5)</option>
+                                    <option value="US 8.0">US 8.0 - (EU 41.0)</option>
+                                    <option value="US 8.5">US 8.5 - (EU 42.0)</option>
+                                    <option value="US 9.0" selected>US 9.0 - (EU 42.5)</option>
+                                    <option value="US 9.5">US 9.5 - (EU 43.0)</option>
+                                    <option value="US 10.0">US 10.0 - (EU 44.0)</option>
+                                    <option value="US 10.5">US 10.5 - (EU 44.5)</option>
+                                    <option value="US 11.0">US 11.0 - (EU 45.0)</option>
+                                    <option value="US 12.0">US 12.0 - (EU 46.0)</option>
+                                </select>
+                            </div>
+
+                            <!-- Full-Width Primary Add to Cart Button -->
+                            <div class="d-grid gap-2 mb-4">
+                                <button type="submit" class="btn btn-primary btn-lg fw-bold py-3 shadow-sm">
+                                    <i class="bi bi-bag-plus-fill me-2"></i> Add to Cart
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Product Specs List -->
+                        <ul class="list-unstyled text-muted small border-top pt-3 mb-4">
+                            <li class="mb-1"><strong>SKU:</strong> #SHOE-@Model.Id.ToString("D5")</li>
+                            <li class="mb-1"><strong>Colorway / Brand:</strong> @Model.Brand</li>
+                            <li class="mb-1"><strong>Added to Catalog:</strong> @Model.CreatedAt.ToString("MMMM dd, yyyy")</li>
+                        </ul>
+
+                        <!-- Admin Controls (Edit & Delete) -->
+                        <div class="d-flex gap-2 border-top pt-3">
+                            <a asp-action="Index" class="btn btn-outline-dark">
+                                <i class="bi bi-arrow-left me-1"></i> Back to Catalog
+                            </a>
+
+                            @if (isAdmin)
+                            {
+                                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil me-1"></i> Edit Product
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">
+                                    <i class="bi bi-trash me-1"></i> Delete Product
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

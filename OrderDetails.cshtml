@@ -1,0 +1,306 @@
+@model ShoeShop.Models.Order
+@{
+    ViewData["Title"] = $"Admin Order Details - #{Model.OrderNumber}";
+
+    // Requirement 1: Display the order status badge dynamically
+    // (e.g., Yellow for Pending, Blue for Processing, Green for Shipped, Red for Cancelled)
+    var statusBadgeClass = Model.Status switch
+    {
+        var s when s.Contains("Cancelled", StringComparison.OrdinalIgnoreCase) => "bg-danger text-white",     // Red for Cancelled
+        var s when s.Contains("Shipped", StringComparison.OrdinalIgnoreCase) => "bg-success text-white",        // Green for Shipped
+        var s when s.Contains("Delivered", StringComparison.OrdinalIgnoreCase) => "bg-success text-white",      // Green for Delivered
+        var s when s.Contains("Processing", StringComparison.OrdinalIgnoreCase) => "bg-primary text-white",     // Blue for Processing
+        var s when s.Contains("Pending", StringComparison.OrdinalIgnoreCase) => "bg-warning text-dark",         // Yellow for Pending
+        var s when s.Contains("Paid", StringComparison.OrdinalIgnoreCase) => "bg-success text-white",          // Green for Paid
+        _ => "bg-secondary text-white"
+    };
+
+    var paymentLabel = Model.PaymentMethod switch
+    {
+        "COD" => "💵 Cash on Delivery",
+        "PayPal" => "🅿️ PayPal",
+        "QRCode" => "📱 QR Code",
+        _ => Model.PaymentMethod
+    };
+}
+
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="AdminDashboard" asp-action="Index" class="text-decoration-none">Admin Portal</a></li>
+            <li class="breadcrumb-item"><a asp-controller="AdminDashboard" asp-action="Orders" class="text-decoration-none">Orders</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Order #@Model.OrderNumber</li>
+        </ol>
+    </nav>
+
+    <!-- Header Bar -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <h1 class="h3 fw-bold mb-0">Order #@Model.OrderNumber</h1>
+                <span class="badge bg-dark">Database ID: @Model.Id</span>
+                <span class="badge @statusBadgeClass px-3 py-2 rounded-pill fs-6 shadow-sm">
+                    @Model.Status
+                </span>
+            </div>
+            <small class="text-muted">Purchased on @Model.CreatedAt.ToString("MMMM dd, yyyy h:mm tt") UTC</small>
+            @if (Model.Status.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                var headerReason = !string.IsNullOrWhiteSpace(Model.CancellationReason)
+                    ? (Model.CancellationReason.StartsWith("Cancelled", StringComparison.OrdinalIgnoreCase) || Model.CancellationReason.Contains(":")
+                        ? Model.CancellationReason
+                        : $"Cancelled by Admin: {Model.CancellationReason}")
+                    : "Cancelled by Admin: Order cancelled";
+
+                <div class="mt-1 text-danger small fw-semibold">
+                    <i class="bi bi-x-circle-fill me-1"></i> @headerReason
+                </div>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="AdminDashboard" asp-action="Orders" class="btn btn-outline-dark btn-sm">
+                <i class="bi bi-list-check me-1"></i> All Orders
+            </a>
+            <a asp-controller="AdminDashboard" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-speedometer2 me-1"></i> Admin Portal
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["StatusMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["StatusMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Left Column: Products in this Order -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-box-seam text-primary me-2"></i> Ordered Shoe Items (@Model.OrderItems.Count)
+                    </h5>
+                    <span class="badge bg-light text-dark border">
+                        Total Quantity: @Model.OrderItems.Sum(i => i.Quantity)
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light small text-uppercase">
+                                <tr>
+                                    <th style="width: 75px;">Image</th>
+                                    <th>Shoe Name & Brand</th>
+                                    <th>Size</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Total Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.OrderItems)
+                                {
+                                    <tr>
+                                        <td>
+                                            <img src="@(string.IsNullOrEmpty(item.ImageUrl) ? "https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=120&q=80" : item.ImageUrl)"
+                                                 alt="@item.ShoeName"
+                                                 class="rounded object-fit-cover border"
+                                                 style="width: 55px; height: 55px;" />
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-dark">@item.ShoeName</div>
+                                            <small class="text-muted">Shoe ID: @item.ShoeId @(!string.IsNullOrEmpty(item.ShoeBrand) ? $"| Brand: {item.ShoeBrand}" : "")</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">@item.Size</span>
+                                        </td>
+                                        <td class="text-center fw-bold">@item.Quantity</td>
+                                        <td class="text-end">$@item.UnitPrice.ToString("F2")</td>
+                                        <td class="text-end fw-bold text-dark">$@item.Total.ToString("F2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold">Grand Total Amount:</td>
+                                    <td class="text-end fw-bold fs-5 text-success">$@Model.TotalAmount.ToString("F2")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Status Controls, Cancellation Reason, Customer Info -->
+        <div class="col-lg-4">
+            <!-- Order Status & Actions Card -->
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-gear-fill text-secondary me-2"></i> Order Fulfillment
+                    </h5>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <!-- Requirement 1: Dynamic Status Badge -->
+                    <div class="mb-3">
+                        <span class="badge @statusBadgeClass px-3 py-2 rounded-pill fs-6 shadow-sm">
+                            @Model.Status
+                        </span>
+                    </div>
+
+                    <!-- Requirement 2: If status is Cancelled, display cancellation reason below status badge -->
+                    @if (Model.Status.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var reasonText = !string.IsNullOrWhiteSpace(Model.CancellationReason)
+                            ? (Model.CancellationReason.StartsWith("Cancelled", StringComparison.OrdinalIgnoreCase) || Model.CancellationReason.Contains(":")
+                                ? Model.CancellationReason
+                                : $"Cancelled by Admin: {Model.CancellationReason}")
+                            : "Cancelled by Admin: Order cancelled";
+
+                        <div class="p-3 bg-danger-subtle border border-danger-subtle rounded-3 text-start mb-3">
+                            <div class="fw-bold text-danger d-flex align-items-center">
+                                <i class="bi bi-x-circle-fill me-2 fs-5"></i> Cancellation Reason:
+                            </div>
+                            <div class="text-danger small mt-1 fw-semibold">
+                                @reasonText
+                            </div>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <!-- Status Update Form -->
+                    <form asp-controller="AdminDashboard" asp-action="UpdateOrderStatus" method="post" class="text-start mb-3">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="orderId" value="@Model.Id" />
+                        <label class="form-label fw-bold small text-muted text-uppercase">Change Order Status:</label>
+                        <div class="input-group">
+                            <select name="newStatus" class="form-select form-select-sm">
+                                <option value="Processing" selected="@(Model.Status == "Processing")">Processing</option>
+                                <option value="Shipped" selected="@(Model.Status == "Shipped")">Shipped</option>
+                                <option value="Delivered" selected="@(Model.Status == "Delivered")">Delivered</option>
+                                <option value="Paid via PayPal" selected="@(Model.Status == "Paid via PayPal")">Paid - PayPal</option>
+                                <option value="Paid via QR Code" selected="@(Model.Status == "Paid via QR Code")">Paid - QR Code</option>
+                                <option value="Pending - Cash on Delivery" selected="@(Model.Status == "Pending - Cash on Delivery")">Pending - COD</option>
+                                <option value="Cancelled" selected="@(Model.Status == "Cancelled")">Cancelled</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary btn-sm px-3">Update</button>
+                        </div>
+                    </form>
+
+                    <!-- Admin Cancel Order Trigger (Opens Modal) -->
+                    @if (Model.Status != "Cancelled")
+                    {
+                        <button type="button" class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#adminCancelModalDetails">
+                            <i class="bi bi-x-circle me-1"></i> Cancel Order with Reason
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger py-2 small mb-0">
+                            <i class="bi bi-slash-circle me-1"></i> This order has been cancelled and stock has been restored.
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Customer & Delivery Profile Card -->
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="fw-bold mb-0">
+                        <i class="bi bi-person-badge text-primary me-2"></i> Customer Profile
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="mb-1"><strong>Name:</strong> @Model.CustomerName</p>
+                    <p class="mb-1"><strong>Email:</strong> @Model.CustomerEmail</p>
+                    <p class="mb-3"><strong>Phone:</strong> @Model.CustomerPhone</p>
+                    @if (!string.IsNullOrEmpty(Model.UserId))
+                    {
+                        <p class="mb-3 text-muted small"><strong>Account User ID:</strong> @Model.UserId</p>
+                    }
+                    <hr />
+                    <p class="mb-1 text-muted small text-uppercase fw-bold">Shipping Address</p>
+                    <p class="mb-3 fw-semibold">@Model.ShippingAddress</p>
+                    <hr />
+                    <p class="mb-1 text-muted small text-uppercase fw-bold">Payment Method</p>
+                    <p class="mb-0 fw-bold text-dark">@paymentLabel</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin Cancellation Bootstrap Modal for OrderDetails -->
+<div class="modal fade" id="adminCancelModalDetails" tabindex="-1" aria-labelledby="modalLabelDetails" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="AdminDashboard" asp-action="AdminCancelOrder" method="post" class="text-start">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="orderId" value="@Model.Id" />
+
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold" id="modalLabelDetails">
+                        <i class="bi bi-exclamation-octagon-fill me-2"></i> Cancel Order #@Model.OrderNumber
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <p class="mb-2">
+                        Are you sure you want to cancel order <strong>#@Model.OrderNumber</strong> for customer <strong>@Model.CustomerName</strong>?
+                    </p>
+                    <div class="alert alert-warning small mb-3">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                        <strong>Inventory restoration:</strong> Cancelling this order will immediately restore 
+                        <strong>@Model.OrderItems.Sum(i => i.Quantity)</strong> shoe item(s) back into active stock.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Cancellation Reason:</label>
+                        <select id="reasonPresetDetails" class="form-select mb-2" onchange="document.getElementById('reasonInputDetails').value = this.value;">
+                            <option value="Out of Stock">Out of Stock</option>
+                            <option value="Fake Order">Fake Order</option>
+                            <option value="Payment Not Received">Payment Not Received</option>
+                            <option value="Customer Requested Cancellation">Customer Requested Cancellation</option>
+                            <option value="Duplicate Order">Duplicate Order</option>
+                            <option value="Fraudulent Activity Detected">Fraudulent Activity Detected</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Cancellation Reason (Saved to Database):</label>
+                        <input type="text" 
+                               id="reasonInputDetails" 
+                               name="cancellationReason" 
+                               class="form-control" 
+                               value="Out of Stock" 
+                               placeholder="Type or select a cancellation reason..." 
+                               required />
+                        <small class="text-muted">You can edit or type a custom reason above.</small>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger btn-sm px-3 fw-bold">
+                        <i class="bi bi-x-circle me-1"></i> Confirm Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

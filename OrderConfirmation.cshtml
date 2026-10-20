@@ -1,0 +1,116 @@
+@{
+    ViewData["Title"] = "Order Confirmation";
+    var orderId = ViewBag.OrderId as string ?? "ORD-849201";
+    var customerName = ViewBag.CustomerName as string ?? "Valued Customer";
+    var shippingAddress = ViewBag.ShippingAddress as string ?? "Standard Delivery Address";
+    var totalAmount = (decimal)(ViewBag.TotalAmount ?? 0m);
+    var paymentMethod = ViewBag.PaymentMethod as string ?? "COD";
+    var orderStatus = ViewBag.OrderStatus as string ?? "Pending - Cash on Delivery";
+
+    string paymentMethodDisplay;
+    string paymentMethodIcon;
+    switch (paymentMethod)
+    {
+        case "COD":
+            paymentMethodDisplay = "Cash on Delivery";
+            paymentMethodIcon = "bi-cash-coin text-success";
+            break;
+        case "PayPal":
+            paymentMethodDisplay = "PayPal";
+            paymentMethodIcon = "bi-paypal text-primary";
+            break;
+        case "QRCode":
+            paymentMethodDisplay = "QR Code";
+            paymentMethodIcon = "bi-qr-code-scan text-info";
+            break;
+        default:
+            paymentMethodDisplay = paymentMethod;
+            paymentMethodIcon = "bi-credit-card text-secondary";
+            break;
+    }
+}
+
+<div class="container py-5 my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6 col-xl-5">
+            <!-- Main Success Card -->
+            <div class="card border-0 shadow rounded-4 overflow-hidden text-center">
+                <div class="card-body p-4 p-md-5">
+                    <!-- Clean Success Checkmark Icon -->
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-circle" style="width: 88px; height: 88px;">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 3.75rem;"></i>
+                        </div>
+                    </div>
+
+                    <!-- Success Messages -->
+                    <h2 class="fw-bold mb-2">Order Confirmed!</h2>
+                    <p class="text-muted mb-4">
+                        Payment Successful! Your shoes are on the way.
+                    </p>
+
+                    <!-- Order Details Summary Card -->
+                    <div class="card bg-light border-0 rounded-3 p-3 mb-4 text-start">
+                        <h6 class="text-uppercase text-muted fw-bold small mb-3 letter-spacing-1">
+                            <i class="bi bi-receipt me-1"></i> Receipt Details
+                        </h6>
+
+                        <!-- Order ID -->
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-muted small">Order ID</span>
+                            <span class="fw-bold font-monospace bg-white border px-2 py-1 rounded small">@orderId</span>
+                        </div>
+
+                        <!-- Customer Name -->
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-muted small">Customer Name</span>
+                            <span class="fw-semibold text-dark">@customerName</span>
+                        </div>
+
+                        <!-- Shipping Address -->
+                        <div class="d-flex justify-content-between align-items-start py-2 border-bottom">
+                            <span class="text-muted small">Shipping Address</span>
+                            <span class="fw-semibold text-dark text-end ms-3 small" style="max-width: 65%;">@shippingAddress</span>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-muted small">Payment Method</span>
+                            <span class="fw-semibold text-dark">
+                                <i class="bi @paymentMethodIcon me-1"></i>@paymentMethodDisplay
+                            </span>
+                        </div>
+
+                        <!-- Order Status -->
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-muted small">Status</span>
+                            <span class="badge @(orderStatus.StartsWith("Paid") ? "bg-success" : "bg-warning text-dark") px-2 py-1 rounded-pill small">
+                                @orderStatus
+                            </span>
+                        </div>
+
+                        <!-- Total Paid Amount -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 pb-1">
+                            <span class="fw-bold text-dark">Total Paid Amount</span>
+                            <span class="fs-4 fw-bold text-success">$@totalAmount.ToString("N2")</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <!-- Continue Shopping Button linking back to Views/Shoes/Index.cshtml -->
+                        <a asp-controller="Shoes" asp-action="Index" class="btn btn-dark btn-lg fw-semibold py-3 rounded-pill shadow-sm">
+                            <i class="bi bi-arrow-left me-2"></i> Continue Shopping
+                        </a>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary rounded-pill py-2">
+                                <i class="bi bi-person me-1"></i> View Order History in Dashboard
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,28 @@
+@model ShoeShop.Models.Shoe
+@{
+    ViewData["Title"] = "Delete Shoe";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-md-6">
+        <div class="card border-danger shadow-sm rounded-3">
+            <div class="card-body p-4 p-sm-5 text-center">
+                <div class="text-danger fs-1 mb-2">⚠️</div>
+                <h3 class="fw-bold mb-2">Delete Shoe Confirmation</h3>
+                <p class="text-muted small mb-4">Are you sure you want to permanently delete this shoe from inventory?</p>
+
+                <div class="bg-light p-3 rounded mb-4 text-start">
+                    <p class="mb-1"><strong>Brand:</strong> @Model.Brand</p>
+                    <p class="mb-1"><strong>Model Name:</strong> @Model.Name</p>
+                    <p class="mb-0"><strong>Price:</strong> $@Model.Price.ToString("F2")</p>
+                </div>
+
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <button type="submit" class="btn btn-danger w-100 py-2 fw-semibold">Confirm Delete</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary w-100 mt-2">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
